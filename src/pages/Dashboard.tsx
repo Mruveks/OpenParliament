@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Users, Vote, Building2, Flag, TrendingUp, Globe } from 'lucide-react';
+import { Users, Vote, Building2, Globe, TrendingUp } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -7,16 +7,19 @@ import {
 import { useGroupStats, useCountryStats, useVotes } from '../hooks/useParliamentData';
 import StatCard from '../components/StatCard';
 import LoadingSpinner from '../components/LoadingSpinner';
+import Hemicycle from '../components/Hemicycle';
 import { getGroupColor } from '../utils/helpers';
 import { COUNTRY_FLAGS } from '../types';
+import { useLanguage } from '../hooks/useLanguage';
 
 export default function Dashboard() {
   const { data: groupStats, isLoading: groupsLoading } = useGroupStats();
   const { data: countryStats, isLoading: countriesLoading } = useCountryStats();
   const { data: votes, isLoading: votesLoading } = useVotes();
+  const { t } = useLanguage();
 
   if (groupsLoading || countriesLoading || votesLoading) {
-    return <LoadingSpinner message="Loading dashboard..." />;
+    return <LoadingSpinner message={t('common.loading')} />;
   }
 
   const totalMEPs = groupStats?.reduce((sum, g) => sum + g.mepCount, 0) || 0;
@@ -41,59 +44,46 @@ export default function Dashboard() {
     <div className="space-y-8">
       {/* Hero */}
       <div className="bg-gradient-to-r from-eu-blue to-blue-700 rounded-2xl p-8 text-white">
-        <h1 className="text-3xl font-bold">European Parliament Explorer</h1>
-        <p className="mt-2 text-blue-200 max-w-2xl">
-          Explore data about Members of the European Parliament, voting patterns,
-          committees, and political groups. Track how your representatives vote on key issues.
-        </p>
+        <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
+        <p className="mt-2 text-blue-200 max-w-2xl">{t('dashboard.subtitle')}</p>
         <div className="flex flex-wrap gap-3 mt-6">
-          <Link
-            to="/meps"
-            className="px-4 py-2 bg-white text-eu-blue rounded-lg font-medium text-sm hover:bg-blue-50 transition-colors"
-          >
-            Browse MEPs
+          <Link to="/meps" className="px-4 py-2 bg-white text-eu-blue rounded-lg font-medium text-sm hover:bg-blue-50 transition-colors">
+            {t('dashboard.browseMeps')}
           </Link>
-          <Link
-            to="/votes"
-            className="px-4 py-2 bg-white/10 text-white rounded-lg font-medium text-sm hover:bg-white/20 transition-colors border border-white/20"
-          >
-            Explore Votes
+          <Link to="/votes" className="px-4 py-2 bg-white/10 text-white rounded-lg font-medium text-sm hover:bg-white/20 transition-colors border border-white/20">
+            {t('dashboard.exploreVotes')}
           </Link>
-          <Link
-            to="/polish"
-            className="px-4 py-2 bg-white/10 text-white rounded-lg font-medium text-sm hover:bg-white/20 transition-colors border border-white/20"
-          >
-            Polish MEPs
+          <Link to="/country" className="px-4 py-2 bg-white/10 text-white rounded-lg font-medium text-sm hover:bg-white/20 transition-colors border border-white/20">
+            {t('dashboard.countryMonitor')}
           </Link>
         </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total MEPs" value={totalMEPs} icon={Users} color="bg-primary-600" />
-        <StatCard label="Political Groups" value={totalGroups} icon={TrendingUp} color="bg-emerald-500" />
-        <StatCard label="Member States" value={countryStats?.length || 27} icon={Globe} color="bg-amber-500" />
-        <StatCard label="Tracked Votes" value={totalVotes} icon={Vote} color="bg-violet-500" />
+        <StatCard label={t('dashboard.totalMeps')} value={totalMEPs} icon={Users} color="bg-primary-600" />
+        <StatCard label={t('dashboard.politicalGroups')} value={totalGroups} icon={TrendingUp} color="bg-emerald-500" />
+        <StatCard label={t('dashboard.memberStates')} value={countryStats?.length || 27} icon={Globe} color="bg-amber-500" />
+        <StatCard label={t('dashboard.trackedVotes')} value={totalVotes} icon={Vote} color="bg-violet-500" />
+      </div>
+
+      {/* Hemicycle */}
+      <div className="bg-white dark:bg-dark-card rounded-xl border border-slate-200 dark:border-dark-border p-6">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">{t('dashboard.hemicycle')}</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{t('dashboard.hemicycleDesc')}</p>
+        <Hemicycle groups={groupStats || []} />
       </div>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Political Groups Pie */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Political Groups</h2>
+        <div className="bg-white dark:bg-dark-card rounded-xl border border-slate-200 dark:border-dark-border p-6">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">{t('dashboard.groups')}</h2>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  dataKey="value"
-                  label={({ name, value }) => `${name} (${value})`}
-                  labelLine={true}
-                >
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value"
+                  label={({ name, value }) => `${name} (${value})`} labelLine={true}>
                   {pieData.map((entry, i) => (
                     <Cell key={i} fill={entry.color} />
                   ))}
@@ -104,12 +94,9 @@ export default function Dashboard() {
           </div>
           <div className="flex flex-wrap gap-2 mt-4">
             {groupStats?.map((g) => (
-              <Link
-                key={g.short}
-                to={`/meps?group=${g.short}`}
+              <Link key={g.short} to={`/meps?group=${g.short}`}
                 className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-full hover:opacity-80 transition-opacity text-white"
-                style={{ backgroundColor: getGroupColor(g.short) }}
-              >
+                style={{ backgroundColor: getGroupColor(g.short) }}>
                 {g.short}: {g.mepCount}
               </Link>
             ))}
@@ -117,14 +104,14 @@ export default function Dashboard() {
         </div>
 
         {/* Country Seats Bar Chart */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Seats by Country (Top 10)</h2>
+        <div className="bg-white dark:bg-dark-card rounded-xl border border-slate-200 dark:border-dark-border p-6">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">{t('dashboard.seatsByCountry')}</h2>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={topCountries} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis type="number" tick={{ fontSize: 12 }} />
-                <YAxis type="category" dataKey="name" width={60} tick={{ fontSize: 12 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis type="number" tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                <YAxis type="category" dataKey="name" width={60} tick={{ fontSize: 12, fill: '#94a3b8' }} />
                 <Tooltip />
                 <Bar dataKey="seats" fill="#003399" radius={[0, 4, 4, 0]} />
               </BarChart>
@@ -134,11 +121,11 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Votes */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white dark:bg-dark-card rounded-xl border border-slate-200 dark:border-dark-border p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-slate-900">Recent Key Votes</h2>
-          <Link to="/votes" className="text-sm text-primary-600 hover:underline font-medium">
-            View all votes
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('dashboard.recentVotes')}</h2>
+          <Link to="/votes" className="text-sm text-primary-600 dark:text-primary-400 hover:underline font-medium">
+            {t('dashboard.viewAllVotes')}
           </Link>
         </div>
         <div className="space-y-3">
@@ -147,34 +134,22 @@ export default function Dashboard() {
             const forPct = total ? (vote.totalFor / total) * 100 : 0;
             const againstPct = total ? (vote.totalAgainst / total) * 100 : 0;
             return (
-              <div key={vote.id} className="border border-slate-100 rounded-lg p-4">
+              <div key={vote.id} className="border border-slate-100 dark:border-slate-700 rounded-lg p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h3 className="font-medium text-slate-900 text-sm">{vote.title}</h3>
-                    <p className="text-xs text-slate-500 mt-1">{vote.date} {vote.subject && `| ${vote.subject}`}</p>
+                    <h3 className="font-medium text-slate-900 dark:text-slate-100 text-sm">{vote.title}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{vote.date} {vote.subject && `| ${vote.subject}`}</p>
                   </div>
-                  <span
-                    className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${
-                      vote.totalFor > vote.totalAgainst
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}
-                  >
-                    {vote.totalFor > vote.totalAgainst ? 'Passed' : 'Rejected'}
+                  <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${vote.totalFor > vote.totalAgainst ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+                    {vote.totalFor > vote.totalAgainst ? t('dashboard.passed') : t('dashboard.rejected')}
                   </span>
                 </div>
                 <div className="mt-3 flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden flex">
-                    <div
-                      className="bg-emerald-500 h-full"
-                      style={{ width: `${forPct}%` }}
-                    />
-                    <div
-                      className="bg-red-500 h-full"
-                      style={{ width: `${againstPct}%` }}
-                    />
+                  <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden flex">
+                    <div className="bg-emerald-500 h-full" style={{ width: `${forPct}%` }} />
+                    <div className="bg-red-500 h-full" style={{ width: `${againstPct}%` }} />
                   </div>
-                  <span className="text-xs text-slate-500 shrink-0">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">
                     {vote.totalFor} / {vote.totalAgainst} / {vote.totalAbstention}
                   </span>
                 </div>
@@ -186,35 +161,20 @@ export default function Dashboard() {
 
       {/* Quick Links */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Link
-          to="/meps"
-          className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-md transition-shadow group"
-        >
+        <Link to="/meps" className="bg-white dark:bg-dark-card rounded-xl border border-slate-200 dark:border-dark-border p-6 hover:shadow-md transition-shadow group">
           <Users className="text-primary-600 mb-3" size={28} />
-          <h3 className="font-semibold text-slate-900 group-hover:text-primary-600">MEP Tracker</h3>
-          <p className="text-sm text-slate-500 mt-1">
-            Search and filter all {totalMEPs} Members of the European Parliament
-          </p>
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-primary-600 dark:group-hover:text-primary-400">{t('dashboard.mepTracker')}</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('dashboard.mepTrackerDesc').replace('{count}', String(totalMEPs))}</p>
         </Link>
-        <Link
-          to="/committees"
-          className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-md transition-shadow group"
-        >
+        <Link to="/committees" className="bg-white dark:bg-dark-card rounded-xl border border-slate-200 dark:border-dark-border p-6 hover:shadow-md transition-shadow group">
           <Building2 className="text-emerald-600 mb-3" size={28} />
-          <h3 className="font-semibold text-slate-900 group-hover:text-emerald-600">Committees</h3>
-          <p className="text-sm text-slate-500 mt-1">
-            Explore 20 parliamentary committees and their members
-          </p>
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-emerald-600">{t('nav.committees')}</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('dashboard.committeesDesc')}</p>
         </Link>
-        <Link
-          to="/polish"
-          className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-md transition-shadow group"
-        >
-          <Flag className="text-red-600 mb-3" size={28} />
-          <h3 className="font-semibold text-slate-900 group-hover:text-red-600">Polish Monitor</h3>
-          <p className="text-sm text-slate-500 mt-1">
-            Track Polish MEPs, their parties and activity in the Parliament
-          </p>
+        <Link to="/country" className="bg-white dark:bg-dark-card rounded-xl border border-slate-200 dark:border-dark-border p-6 hover:shadow-md transition-shadow group">
+          <Globe className="text-amber-500 mb-3" size={28} />
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-amber-500">{t('nav.countryMonitor')}</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('dashboard.countryMonitorDesc')}</p>
         </Link>
       </div>
     </div>

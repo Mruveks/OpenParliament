@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   getMockMEPs,
   getMockMEPById,
-  getMockPolishMEPs,
+  getMockCountryMEPs,
   getMockCommittees,
   getMockCommitteeMembers,
   getMockVotes,
@@ -11,9 +11,6 @@ import {
   getMockCorporateBodies,
 } from '../api/mockData';
 import type { MEP, Committee, VoteResult, CorporateBody } from '../types';
-
-// We use mock data by default; when the real API is available (deployed with proxy),
-// swap these for the real API calls from ../api/europarl.ts
 
 export function useMEPs(params: {
   offset?: number;
@@ -38,10 +35,11 @@ export function useMEPById(id: string) {
   });
 }
 
-export function usePolishMEPs() {
+export function useCountryMEPs(countryCode: string) {
   return useQuery<MEP[]>({
-    queryKey: ['polish-meps'],
-    queryFn: () => getMockPolishMEPs(),
+    queryKey: ['country-meps', countryCode],
+    queryFn: () => getMockCountryMEPs(countryCode),
+    enabled: !!countryCode,
   });
 }
 

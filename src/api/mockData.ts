@@ -1,6 +1,5 @@
 import type { MEP, VoteResult, Committee, CorporateBody, GroupVote } from '../types';
 
-const POLISH_PARTIES = ['PiS', 'PO', 'Lewica', 'PSL', 'Konfederacja', 'Polska 2050'];
 const GROUPS = ['EPP', 'S&D', 'RE', 'Greens/EFA', 'ECR', 'The Left', 'PfE', 'NI', 'ESN'];
 const GROUP_FULL: Record<string, string> = {
   'EPP': 'European People\'s Party',
@@ -248,6 +247,7 @@ function generateVotes(): VoteResult[] {
   const votes: VoteResult[] = [];
 
   const topics = [
+    // 9th term (2019-2024) key votes
     { title: 'European Green Deal - Fit for 55 package', subject: 'Environment' },
     { title: 'Digital Services Act (DSA)', subject: 'Digital' },
     { title: 'Digital Markets Act (DMA)', subject: 'Digital' },
@@ -273,14 +273,51 @@ function generateVotes(): VoteResult[] {
     { title: 'European Hydrogen Strategy', subject: 'Energy' },
     { title: 'Schengen Area Enlargement', subject: 'Internal Affairs' },
     { title: 'EU-Ukraine Association Agreement Update', subject: 'Foreign Affairs' },
+    // 10th term (2024-present) additional votes
+    { title: 'EU Defence Fund 2025-2027', subject: 'Defence' },
+    { title: 'European Sovereignty Fund Regulation', subject: 'Budget' },
+    { title: 'Regulation on Transparency of Political Advertising', subject: 'Media' },
+    { title: 'European Cloud Infrastructure Act', subject: 'Digital' },
+    { title: 'Farm to Fork Strategy Implementation', subject: 'Agriculture' },
+    { title: 'EU-Mercosur Trade Agreement Ratification', subject: 'Foreign Affairs' },
+    { title: 'European Battery Regulation Update', subject: 'Industry' },
+    { title: 'Resolution on AI Safety Standards', subject: 'Digital' },
+    { title: 'EU Minimum Wage Directive Implementation Review', subject: 'Employment' },
+    { title: 'European Data Act Implementing Measures', subject: 'Digital' },
+    { title: 'Resolution on Russian Sanctions Package XIV', subject: 'Foreign Affairs' },
+    { title: 'EU Carbon Border Adjustment Mechanism Review', subject: 'Environment' },
+    { title: 'European Space Strategy for Security and Defence', subject: 'Defence' },
+    { title: 'Regulation on Critical Medicines Supply Chain', subject: 'Health' },
+    { title: 'EU Clean Industrial Deal Package', subject: 'Industry' },
+    { title: 'Resolution on Ukraine EU Membership Progress', subject: 'Foreign Affairs' },
+    { title: 'European Financial Data Space Regulation', subject: 'Finance' },
+    { title: 'Directive on Green Claims and Greenwashing', subject: 'Consumer' },
+    { title: 'EU Competitiveness Act Implementation', subject: 'Industry' },
+    { title: 'European Media Sovereignty Act', subject: 'Media' },
+    { title: 'Resolution on AI in Public Administration', subject: 'Digital' },
+    { title: 'EU Cyber Defence Strategy Implementation', subject: 'Defence' },
+    { title: 'European Affordable Housing Initiative', subject: 'Employment' },
+    { title: 'Regulation on Agricultural Carbon Farming', subject: 'Agriculture' },
+    { title: 'EU Digital Identity Wallet Rollout Review', subject: 'Digital' },
+    { title: 'European Tourism Sustainability Framework', subject: 'Consumer' },
   ];
 
   const dates = [
+    // 2024
     '2024-01-17', '2024-02-06', '2024-02-28', '2024-03-12', '2024-03-13',
     '2024-04-10', '2024-04-24', '2024-05-09', '2024-06-12', '2024-07-17',
     '2024-09-17', '2024-10-08', '2024-10-22', '2024-11-13', '2024-11-28',
-    '2024-12-17', '2025-01-15', '2025-01-29', '2025-02-12', '2025-02-27',
+    '2024-12-17',
+    // 2025
+    '2025-01-15', '2025-01-29', '2025-02-12', '2025-02-27',
     '2025-03-12', '2025-04-02', '2025-04-16', '2025-05-07', '2025-05-22',
+    '2025-06-18', '2025-07-09', '2025-09-10', '2025-09-24', '2025-10-08',
+    '2025-10-22', '2025-11-12', '2025-11-26', '2025-12-10', '2025-12-17',
+    // 2026
+    '2026-01-14', '2026-01-28', '2026-02-11', '2026-02-25',
+    '2026-03-11', '2026-03-25', '2026-04-08', '2026-04-22',
+    '2026-05-06', '2026-05-20', '2026-06-03', '2026-06-17',
+    '2026-07-01', '2026-07-15', '2026-09-09', '2026-09-23',
   ];
 
   for (let i = 0; i < topics.length; i++) {
@@ -379,6 +416,10 @@ export function getMockMEPById(id: string): MEP | undefined {
 
 export function getMockPolishMEPs(): MEP[] {
   return ALL_MEPS.filter((m) => m.countryCode === 'PL');
+}
+
+export function getMockCountryMEPs(countryCode: string): MEP[] {
+  return ALL_MEPS.filter((m) => m.countryCode === countryCode);
 }
 
 export function getMockCommittees(): Committee[] {
