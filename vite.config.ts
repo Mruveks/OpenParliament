@@ -11,6 +11,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/ep/, '/api/v2'),
       },
+      '/api/sejm': {
+        target: 'https://api.sejm.gov.pl',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/sejm/, ''),
+      },
     },
   },
 })

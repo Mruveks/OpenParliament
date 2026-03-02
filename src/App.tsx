@@ -10,6 +10,8 @@ import VotingExplorer from './pages/VotingExplorer';
 import CountryMonitor from './pages/CountryMonitor';
 import CommitteeExplorer from './pages/CommitteeExplorer';
 import Statistics from './pages/Statistics';
+import SejmComparator from './pages/SejmComparator';
+import LegislativePipeline from './pages/LegislativePipeline';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +38,8 @@ export default function App() {
                 <Route path="/country/:countryCode" element={<CountryMonitor />} />
                 <Route path="/committees" element={<CommitteeExplorer />} />
                 <Route path="/stats" element={<Statistics />} />
+                <Route path="/sejm" element={<SejmComparator />} />
+                <Route path="/pipeline" element={<LegislativePipeline />} />
               </Routes>
             </Layout>
           </BrowserRouter>

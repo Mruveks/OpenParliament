@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   Users, Vote, BarChart3, Building2, Home, Globe,
-  Menu, X, Sun, Moon, Languages,
+  Menu, X, Sun, Moon, Languages, FileText,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTheme } from '../hooks/useTheme';
@@ -20,6 +20,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { path: '/votes', label: t('nav.votingExplorer'), icon: Vote },
     { path: '/country', label: t('nav.countryMonitor'), icon: Globe },
     { path: '/committees', label: t('nav.committees'), icon: Building2 },
+    { path: '/sejm', label: t('nav.sejmComparator') || 'Sejm vs EP', icon: Building2 },
+    { path: '/pipeline', label: t('nav.pipeline') || 'Pipeline', icon: FileText },
     { path: '/stats', label: t('nav.statistics'), icon: BarChart3 },
   ];
 
@@ -115,6 +117,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {t('footer.dataFrom')}{' '}
             <a href="https://data.europarl.europa.eu" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
               {t('footer.portal')}
+            </a>
+            {' & '}
+            <a href="https://api.sejm.gov.pl" target="_blank" rel="noopener noreferrer" className="text-red-400 hover:underline">
+              Sejm API
             </a>
           </p>
         </div>
