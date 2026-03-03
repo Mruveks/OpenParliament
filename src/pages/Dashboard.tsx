@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import { useGroupStats, useCountryStats, useVotes } from '../hooks/useParliamentData';
 import StatCard from '../components/StatCard';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { SkeletonStatCards, SkeletonChart } from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
 import Hemicycle from '../components/Hemicycle';
 import { getGroupColor } from '../utils/helpers';
@@ -16,15 +16,10 @@ import { useLanguage } from '../hooks/useLanguage';
 export default function Dashboard() {
   const { data: groupStats, isLoading: groupsLoading, error: groupsError, refetch: refetchGroups } = useGroupStats();
   const { data: countryStats, isLoading: countriesLoading, error: countriesError, refetch: refetchCountries } = useCountryStats();
-  const { data: votes, isLoading: votesLoading, error: votesError } = useVotes();
+  const { data: votes, isLoading: votesLoading } = useVotes();
   const { t } = useLanguage();
 
-  const isLoading = groupsLoading || countriesLoading;
   const hasError = groupsError || countriesError;
-
-  if (isLoading) {
-    return <LoadingSpinner message={t('common.loading')} />;
-  }
 
   if (hasError && !groupStats && !countryStats) {
     return (
@@ -77,26 +72,34 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label={t('dashboard.totalMeps')} value={totalMEPs} icon={Users} color="bg-primary-600" />
-        <StatCard label={t('dashboard.politicalGroups')} value={totalGroups} icon={TrendingUp} color="bg-emerald-500" />
-        <StatCard label={t('dashboard.memberStates')} value={countryStats?.length || 27} icon={Globe} color="bg-amber-500" />
-        <StatCard label={t('dashboard.trackedVotes')} value={totalVotes} icon={Vote} color="bg-violet-500" />
-      </div>
+      {groupsLoading || countriesLoading ? (
+        <SkeletonStatCards count={4} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label={t('dashboard.totalMeps')} value={totalMEPs} icon={Users} color="bg-primary-600" />
+          <StatCard label={t('dashboard.politicalGroups')} value={totalGroups} icon={TrendingUp} color="bg-emerald-500" />
+          <StatCard label={t('dashboard.memberStates')} value={countryStats?.length || 27} icon={Globe} color="bg-amber-500" />
+          <StatCard label={t('dashboard.trackedVotes')} value={totalVotes} icon={Vote} color="bg-violet-500" />
+        </div>
+      )}
 
       {/* Hemicycle */}
-      {groupStats && groupStats.length > 0 && (
+      {groupsLoading ? (
+        <SkeletonChart height="h-80" />
+      ) : groupStats && groupStats.length > 0 ? (
         <div className="bg-white dark:bg-dark-card rounded-xl border border-slate-200 dark:border-dark-border p-6">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">{t('dashboard.hemicycle')}</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{t('dashboard.hemicycleDesc')}</p>
           <Hemicycle groups={groupStats} />
         </div>
-      )}
+      ) : null}
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Political Groups Pie */}
-        {pieData.length > 0 && (
+        {groupsLoading ? (
+          <SkeletonChart />
+        ) : pieData.length > 0 ? (
           <div className="bg-white dark:bg-dark-card rounded-xl border border-slate-200 dark:border-dark-border p-6">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">{t('dashboard.groups')}</h2>
             <div className="h-72">
@@ -122,10 +125,12 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Country Seats Bar Chart */}
-        {topCountries.length > 0 && (
+        {countriesLoading ? (
+          <SkeletonChart />
+        ) : topCountries.length > 0 ? (
           <div className="bg-white dark:bg-dark-card rounded-xl border border-slate-200 dark:border-dark-border p-6">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">{t('dashboard.seatsByCountry')}</h2>
             <div className="h-72">
@@ -140,11 +145,13 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Recent Votes / Documents */}
-      {!votesLoading && !votesError && recentVotes.length > 0 && (
+      {votesLoading ? (
+        <SkeletonChart height="h-48" />
+      ) : recentVotes.length > 0 ? (
         <div className="bg-white dark:bg-dark-card rounded-xl border border-slate-200 dark:border-dark-border p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('dashboard.recentVotes')}</h2>
@@ -167,9 +174,13 @@ export default function Dashboard() {
                         {vote.date} {vote.documentRef && `| ${vote.documentRef}`}
                       </p>
                     </div>
-                    {hasVoteData && (
+                    {hasVoteData ? (
                       <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${vote.totalFor > vote.totalAgainst ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
                         {vote.totalFor > vote.totalAgainst ? t('dashboard.passed') : t('dashboard.rejected')}
+                      </span>
+                    ) : (
+                      <span className="shrink-0 px-2 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                        Document
                       </span>
                     )}
                   </div>
@@ -189,7 +200,7 @@ export default function Dashboard() {
             })}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Quick Links */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

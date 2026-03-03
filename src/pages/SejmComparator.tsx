@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import { useSejmMPs, useSejmClubs, useSejmCommittees, useSejmRecentVotings } from '../hooks/useSejmData';
 import { useCountryMEPs } from '../hooks/useParliamentData';
-import LoadingSpinner from '../components/LoadingSpinner';
+import LoadingSpinner, { SkeletonChart, SkeletonStatCards, SkeletonCardGrid } from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
 import StatCard from '../components/StatCard';
 import SearchFilter from '../components/SearchFilter';

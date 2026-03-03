@@ -8,7 +8,7 @@ import {
 import { useCountryMEPs } from '../hooks/useParliamentData';
 import MEPCard from '../components/MEPCard';
 import SearchFilter from '../components/SearchFilter';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { SkeletonStatCards, SkeletonChart, SkeletonCardGrid } from '../components/LoadingSpinner';
 import StatCard from '../components/StatCard';
 import { getGroupColor } from '../utils/helpers';
 import { EU_COUNTRIES, COUNTRY_FLAGS } from '../types';
@@ -136,7 +136,25 @@ export default function CountryMonitor() {
     );
   }
 
-  if (isLoading) return <LoadingSpinner message={t('common.loading')} />;
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-r from-eu-blue to-blue-700 rounded-2xl p-6 text-white">
+          <h1 className="text-2xl font-bold flex items-center gap-3">
+            <span className="text-3xl">{COUNTRY_FLAGS[countryCode]}</span>
+            {t('country.meps').replace('{country}', countryName)}
+          </h1>
+          <p className="mt-2 text-blue-200">{t('country.subtitle')}</p>
+        </div>
+        <SkeletonStatCards count={4} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SkeletonChart height="h-64" />
+          <SkeletonChart height="h-64" />
+        </div>
+        <SkeletonCardGrid count={6} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -4,7 +4,7 @@ import { Building2, ChevronRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useCommittees, useCommitteeMembers } from '../hooks/useParliamentData';
 import MEPCard from '../components/MEPCard';
-import LoadingSpinner from '../components/LoadingSpinner';
+import LoadingSpinner, { SkeletonCardGrid, SkeletonChart } from '../components/LoadingSpinner';
 import SearchFilter from '../components/SearchFilter';
 import { getGroupColor } from '../utils/helpers';
 import { useLanguage } from '../hooks/useLanguage';
@@ -82,7 +82,12 @@ export default function CommitteeExplorer() {
                 </p>
               </div>
 
-              {membersLoading ? <LoadingSpinner message={t('common.loading')} /> : (
+              {membersLoading ? (
+                <div className="space-y-6">
+                  <SkeletonChart height="h-48" />
+                  <SkeletonCardGrid count={4} />
+                </div>
+              ) : (
                 <>
                   <div className="bg-white dark:bg-dark-card rounded-xl border border-slate-200 dark:border-dark-border p-6">
                     <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">{t('committees.groupComposition')}</h3>

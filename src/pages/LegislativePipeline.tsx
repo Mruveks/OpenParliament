@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useSejmProcesses } from '../hooks/useSejmData';
 import { usePlenaryDocuments } from '../hooks/useParliamentData';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { SkeletonChart, SkeletonStatCards } from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
 import SearchFilter from '../components/SearchFilter';
 import { useLanguage } from '../hooks/useLanguage';
@@ -57,7 +57,24 @@ export default function LegislativePipeline() {
   const isLoading = tab === 'sejm' ? sejmLoading : epLoading;
   const hasError = tab === 'sejm' ? sejmError : epError;
 
-  if (isLoading) return <LoadingSpinner message={t('common.loading')} />;
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-r from-indigo-700 to-purple-700 rounded-2xl p-6 text-white">
+          <h1 className="text-2xl font-bold flex items-center gap-3">
+            <FileText size={28} />
+            {t('pipeline.title') || 'Legislative Pipeline'}
+          </h1>
+          <p className="mt-2 text-indigo-200">
+            {t('pipeline.subtitle') || 'Track legislative processes in the Polish Sejm and European Parliament plenary documents.'}
+          </p>
+        </div>
+        <SkeletonStatCards count={4} />
+        <SkeletonChart height="h-64" />
+        <SkeletonChart height="h-64" />
+      </div>
+    );
+  }
 
   if (hasError) {
     return (

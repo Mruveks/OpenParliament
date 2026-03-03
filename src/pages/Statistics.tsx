@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, Cell, PieChart, Pie, Treemap,
 } from 'recharts';
 import { useGroupStats, useCountryStats, useMEPs } from '../hooks/useParliamentData';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { SkeletonChart, SkeletonTable } from '../components/LoadingSpinner';
 import { getGroupColor } from '../utils/helpers';
 import { COUNTRY_FLAGS, POLITICAL_GROUP_COLORS } from '../types';
 import { useLanguage } from '../hooks/useLanguage';
@@ -72,7 +72,26 @@ export default function Statistics() {
     return countryStats.map((c) => ({ name: c.countryCode, size: c.totalSeats }));
   }, [countryStats]);
 
-  if (isLoading) return <LoadingSpinner message={t('common.loading')} />;
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <BarChart3 className="text-primary-600" size={28} />
+            {t('stats.title')}
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('stats.subtitle')}</p>
+        </div>
+        <SkeletonChart height="h-80" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SkeletonChart height="h-64" />
+          <SkeletonChart height="h-64" />
+        </div>
+        <SkeletonChart height="h-96" />
+        <SkeletonTable rows={10} cols={8} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, User, MapPin, Building2, ExternalLink } from 'lucide-react';
 import { useMEPById } from '../hooks/useParliamentData';
-import LoadingSpinner from '../components/LoadingSpinner';
+import LoadingSpinner, { SkeletonChart } from '../components/LoadingSpinner';
 import GroupBadge from '../components/GroupBadge';
 import { getCountryFlag } from '../utils/helpers';
 import { useLanguage } from '../hooks/useLanguage';

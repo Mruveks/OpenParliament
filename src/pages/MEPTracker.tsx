@@ -4,7 +4,7 @@ import { Users, Filter } from 'lucide-react';
 import { useMEPs, useCommittees } from '../hooks/useParliamentData';
 import MEPCard from '../components/MEPCard';
 import SearchFilter from '../components/SearchFilter';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { SkeletonCardGrid } from '../components/LoadingSpinner';
 import { EU_COUNTRIES, COUNTRY_FLAGS, POLITICAL_GROUP_COLORS } from '../types';
 import { useLanguage } from '../hooks/useLanguage';
 
@@ -92,7 +92,7 @@ export default function MEPTracker() {
         )}
       </div>
 
-      {isLoading ? <LoadingSpinner message={t('common.loading')} /> : paginatedMEPs.length === 0 ? (
+      {isLoading ? <SkeletonCardGrid count={12} /> : paginatedMEPs.length === 0 ? (
         <div className="text-center py-12 text-slate-500 dark:text-slate-400">
           <Users className="mx-auto mb-3 text-slate-300 dark:text-slate-600" size={48} />
           <p className="font-medium">{t('meps.noResults')}</p>

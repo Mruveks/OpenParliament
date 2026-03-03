@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import { useVotes } from '../hooks/useParliamentData';
 import SearchFilter from '../components/SearchFilter';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { SkeletonChart } from '../components/LoadingSpinner';
 import { getGroupColor } from '../utils/helpers';
 import { useLanguage } from '../hooks/useLanguage';
 
@@ -48,7 +48,22 @@ export default function VotingExplorer() {
     return Object.entries(counts).map(([topic, count]) => ({ topic, count })).sort((a, b) => b.count - a.count);
   }, [votes]);
 
-  if (isLoading) return <LoadingSpinner message={t('common.loading')} />;
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <Vote className="text-violet-600" size={28} />
+            {t('votes.title')}
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('votes.subtitle')}</p>
+        </div>
+        <SkeletonChart height="h-48" />
+        <SkeletonChart height="h-64" />
+        <SkeletonChart height="h-64" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -109,9 +124,15 @@ export default function VotingExplorer() {
                     {vote.documentRef && <span className="text-xs text-slate-400 dark:text-slate-500">{vote.documentRef}</span>}
                   </div>
                 </div>
-                <span className={`shrink-0 px-3 py-1 rounded-lg text-sm font-medium ${passed ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
-                  {passed ? t('votes.passed') : t('votes.rejected')}
-                </span>
+                {total > 0 ? (
+                  <span className={`shrink-0 px-3 py-1 rounded-lg text-sm font-medium ${passed ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+                    {passed ? t('votes.passed') : t('votes.rejected')}
+                  </span>
+                ) : (
+                  <span className="shrink-0 px-3 py-1 rounded-lg text-sm font-medium bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                    Document
+                  </span>
+                )}
               </div>
 
               <div className="mt-4">
