@@ -18,7 +18,7 @@ export default function LegislativePipeline() {
 
   const filteredSejmProcesses = useMemo(() => {
     if (!sejmProcesses) return [];
-    let filtered = sejmProcesses;
+    let filtered = [...sejmProcesses];
     if (search) {
       const q = search.toLowerCase();
       filtered = filtered.filter((p) =>
@@ -31,17 +31,32 @@ export default function LegislativePipeline() {
     } else if (statusFilter === 'pending') {
       filtered = filtered.filter((p) => p.passed !== true);
     }
+    // Sort by date descending (newest first)
+    filtered.sort((a, b) => {
+      const dateA = a.processStartDate || '';
+      const dateB = b.processStartDate || '';
+      return dateB.localeCompare(dateA);
+    });
     return filtered;
   }, [sejmProcesses, search, statusFilter]);
 
   const filteredEPDocuments = useMemo(() => {
     if (!epDocuments) return [];
-    if (!search) return epDocuments;
-    const q = search.toLowerCase();
-    return epDocuments.filter((d) =>
-      d.title.toLowerCase().includes(q) ||
-      (d.documentRef || '').toLowerCase().includes(q)
-    );
+    let filtered = [...epDocuments];
+    if (search) {
+      const q = search.toLowerCase();
+      filtered = filtered.filter((d) =>
+        d.title.toLowerCase().includes(q) ||
+        (d.documentRef || '').toLowerCase().includes(q)
+      );
+    }
+    // Sort by date descending (newest first)
+    filtered.sort((a, b) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      return dateB.localeCompare(dateA);
+    });
+    return filtered;
   }, [epDocuments, search]);
 
   const sejmStats = useMemo(() => {

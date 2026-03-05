@@ -291,6 +291,21 @@ function extractGroupShort(
     }
   }
 
+  // Tier 3: Brute-force - stringify the entire object and scan for group mentions
+  const json = JSON.stringify(memberships);
+  for (const [short, full] of GROUP_NAME_MAP) {
+    if (json.includes(full) || json.includes(short)) return short;
+  }
+
+  return 'NI';
+}
+
+/** Brute-force scan entire MEP object for any mention of a political group */
+function bruteForceGroupDetection(data: Record<string, unknown>): string {
+  const json = JSON.stringify(data);
+  for (const [short, full] of GROUP_NAME_MAP) {
+    if (json.includes(full) || json.includes(short)) return short;
+  }
   return 'NI';
 }
 
@@ -324,13 +339,18 @@ function parseMEP(
     '';
   const countryCode = parseCountryCode(countryUri);
 
-  // Political group from memberships
+  // Political group from memberships (Tier 1+2: structured + stringify memberships)
   const memberships =
     data['hasMembership'] ||
     data['membership'] ||
     data['inverse_hasMember'] ||
     data['memberOf'];
-  const groupShort = extractGroupShort(memberships, groupMap);
+  let groupShort = extractGroupShort(memberships, groupMap);
+
+  // Tier 3: brute-force scan entire MEP object if still NI
+  if (groupShort === 'NI') {
+    groupShort = bruteForceGroupDetection(data);
+  }
 
   // National party
   const nationalParty =
@@ -455,23 +475,76 @@ export async function fetchMEPs(params: {
 }
 
 export async function fetchAllMEPs(countryCode?: string): Promise<MEP[]> {
-  const allItems: MEP[] = [];
-  let offset = 0;
   const limit = 100;
 
-  while (true) {
-    const result = await fetchMEPs({ offset, limit, countryCode });
-    allItems.push(...result.items);
+  // First page: get total count
+  const firstResult = await fetchMEPs({ offset: 0, limit, countryCode });
+  const allItems: MEP[] = [...firstResult.items];
+  const total = firstResult.total;
 
-    // Stop if we've fetched all or if the batch came back empty
-    if (allItems.length >= result.total || result.items.length === 0) break;
-    offset += limit;
+  if (allItems.length < total) {
+    // Build remaining page offsets and fetch in parallel (batches of 5)
+    const offsets: number[] = [];
+    for (let offset = limit; offset < total && offset < 2000; offset += limit) {
+      offsets.push(offset);
+    }
 
-    // Safety valve
-    if (offset > 2000) break;
+    const batchSize = 5;
+    for (let i = 0; i < offsets.length; i += batchSize) {
+      const batch = offsets.slice(i, i + batchSize);
+      const results = await Promise.all(
+        batch.map(offset => fetchMEPs({ offset, limit, countryCode }))
+      );
+      for (const result of results) {
+        allItems.push(...result.items);
+      }
+    }
+  }
+
+  // If >50% of MEPs are NI, try enriching with individual detail fetches
+  const niCount = allItems.filter(m => m.politicalGroupShort === 'NI').length;
+  if (niCount > allItems.length * 0.5 && allItems.length > 10) {
+    console.log(`[EP API] ${niCount}/${allItems.length} MEPs are NI - enriching with individual details...`);
+    return enrichMEPsWithDetails(allItems);
   }
 
   return allItems;
+}
+
+/** Batch-fetch individual MEP details to resolve political groups */
+async function enrichMEPsWithDetails(meps: MEP[]): Promise<MEP[]> {
+  const enriched = [...meps];
+  const niIndices = meps
+    .map((m, i) => m.politicalGroupShort === 'NI' ? i : -1)
+    .filter(i => i >= 0);
+
+  const batchSize = 20;
+  let enrichedCount = 0;
+
+  for (let i = 0; i < niIndices.length; i += batchSize) {
+    const batch = niIndices.slice(i, i + batchSize);
+    const results = await Promise.allSettled(
+      batch.map(idx => fetchMEPById(enriched[idx].id))
+    );
+
+    for (let j = 0; j < results.length; j++) {
+      const result = results[j];
+      if (result.status === 'fulfilled' && result.value.politicalGroupShort !== 'NI') {
+        const idx = batch[j];
+        enriched[idx] = {
+          ...enriched[idx],
+          politicalGroup: result.value.politicalGroup,
+          politicalGroupShort: result.value.politicalGroupShort,
+          nationalParty: result.value.nationalParty || enriched[idx].nationalParty,
+          countryCode: result.value.countryCode || enriched[idx].countryCode,
+        };
+        enrichedCount++;
+      }
+    }
+  }
+
+  console.log(`[EP API] Enriched ${enrichedCount}/${niIndices.length} MEPs with political groups`);
+  return enriched;
 }
 
 export async function fetchMEPById(id: string): Promise<MEP> {
@@ -638,6 +711,12 @@ export async function fetchPlenaryDocuments(params: {
       subject: unwrapLiteral(item['subject']) || undefined,
       description: unwrapLiteral(item['description']) || undefined,
     };
+  }).sort((a, b) => {
+    // Sort by date descending (newest first)
+    if (a.date && b.date) return b.date.localeCompare(a.date);
+    if (a.date) return -1;
+    if (b.date) return 1;
+    return 0;
   });
 }
 

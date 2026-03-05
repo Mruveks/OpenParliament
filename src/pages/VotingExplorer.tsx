@@ -135,18 +135,20 @@ export default function VotingExplorer() {
                 )}
               </div>
 
-              <div className="mt-4">
-                <div className="flex items-center gap-3 text-sm mb-2">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">{t('votes.for')}: {vote.totalFor} ({forPct.toFixed(1)}%)</span>
-                  <span className="text-red-600 dark:text-red-400 font-medium">{t('votes.against')}: {vote.totalAgainst} ({againstPct.toFixed(1)}%)</span>
-                  <span className="text-slate-500 dark:text-slate-400">{t('votes.abstention')}: {vote.totalAbstention} ({absPct.toFixed(1)}%)</span>
+              {total > 0 && (
+                <div className="mt-4">
+                  <div className="flex items-center gap-3 text-sm mb-2">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">{t('votes.for')}: {vote.totalFor} ({forPct.toFixed(1)}%)</span>
+                    <span className="text-red-600 dark:text-red-400 font-medium">{t('votes.against')}: {vote.totalAgainst} ({againstPct.toFixed(1)}%)</span>
+                    <span className="text-slate-500 dark:text-slate-400">{t('votes.abstention')}: {vote.totalAbstention} ({absPct.toFixed(1)}%)</span>
+                  </div>
+                  <div className="h-3 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden flex">
+                    <div className="bg-emerald-500 h-full transition-all" style={{ width: `${forPct}%` }} />
+                    <div className="bg-red-500 h-full transition-all" style={{ width: `${againstPct}%` }} />
+                    <div className="bg-slate-300 dark:bg-slate-500 h-full transition-all" style={{ width: `${absPct}%` }} />
+                  </div>
                 </div>
-                <div className="h-3 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden flex">
-                  <div className="bg-emerald-500 h-full transition-all" style={{ width: `${forPct}%` }} />
-                  <div className="bg-red-500 h-full transition-all" style={{ width: `${againstPct}%` }} />
-                  <div className="bg-slate-300 dark:bg-slate-500 h-full transition-all" style={{ width: `${absPct}%` }} />
-                </div>
-              </div>
+              )}
 
               {isSelected && vote.groups && (
                 <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-700">
