@@ -47,10 +47,22 @@ function unwrapLiteral(value: unknown): string {
 }
 
 /** Extract items from various JSON-LD response envelope formats */
-function extractGraph(data: Record<string, unknown>): Record<string, unknown>[] {
+function extractGraph(data: Record<string, unknown>, debugLabel?: string): Record<string, unknown>[] {
+  if (debugLabel) {
+    console.log(`[EP API][${debugLabel}] Response keys:`, Object.keys(data));
+  }
+
   // Direct @graph array
   if (Array.isArray(data['@graph'])) {
     const graph = data['@graph'] as Record<string, unknown>[];
+    if (debugLabel) {
+      console.log(`[EP API][${debugLabel}] @graph length:`, graph.length);
+      if (graph.length > 0) {
+        console.log(`[EP API][${debugLabel}] First item keys:`, Object.keys(graph[0]));
+        console.log(`[EP API][${debugLabel}] First item @type:`, graph[0]['@type']);
+      }
+    }
+
     // Check if @graph[0] is a Collection wrapper containing the actual items
     if (
       graph.length === 1 &&
@@ -60,17 +72,23 @@ function extractGraph(data: Record<string, unknown>): Record<string, unknown>[] 
       const first = graph[0] as Record<string, unknown>;
       const typeStr = String(first['@type'] || '');
       if (typeStr.includes('Collection') || typeStr.includes('PagedCollection')) {
+        if (debugLabel) console.log(`[EP API][${debugLabel}] Found Collection wrapper`);
         const members =
           first['member'] || first['hasMember'] || first['items'] || first['hydra:member'];
         if (Array.isArray(members)) return members as Record<string, unknown>[];
       }
     }
-    // Filter to only person-type items if the graph also contains other types
+
+    // The @graph may contain mixed types (Person, Membership, Organization)
+    // Filter to only person-type items if present
     const persons = graph.filter((item) => {
       const t = String(item['@type'] || '');
       return t.includes('Person') || item['givenName'] || item['familyName'];
     });
-    if (persons.length > 0) return persons;
+    if (persons.length > 0) {
+      if (debugLabel) console.log(`[EP API][${debugLabel}] Found ${persons.length} Person items in @graph`);
+      return persons;
+    }
     return graph;
   }
 
@@ -80,6 +98,7 @@ function extractGraph(data: Record<string, unknown>): Record<string, unknown>[] 
   if (Array.isArray(data['member'])) return data['member'] as Record<string, unknown>[];
   if (Array.isArray(data['results'])) return data['results'] as Record<string, unknown>[];
 
+  if (debugLabel) console.log(`[EP API][${debugLabel}] No items found in response!`);
   return [];
 }
 
@@ -180,29 +199,48 @@ async function buildPoliticalGroupMap(): Promise<Record<string, string>> {
   for (const g of KNOWN_GROUPS) map[g] = g;
 
   try {
-    const bodies = await fetchCorporateBodies({ limit: 300 });
-    for (const body of bodies) {
-      const notation = body.notation;
-      const label = body.prefLabel;
+    // Fetch raw JSON to get the full URIs too
+    const data = await fetchJSON(`${BASE_URL}/corporate-bodies`, {
+      offset: '0',
+      limit: '300',
+    });
+    const graph = extractGraph(data);
+
+    for (const item of graph) {
+      const fullUri = unwrapUri(item['@id']) || '';
+      const bodyId = extractId(fullUri);
+      const notation =
+        unwrapLiteral(item['notation']) ||
+        unwrapLiteral(item['skos:notation']) ||
+        '';
+      const label =
+        unwrapLiteral(item['prefLabel']) ||
+        unwrapLiteral(item['label']) ||
+        unwrapLiteral(item['skos:prefLabel']) ||
+        '';
 
       // Direct notation match
       if (KNOWN_GROUPS.has(notation)) {
-        map[body.id] = notation;
+        map[bodyId] = notation;
         map[notation] = notation;
+        if (fullUri) map[fullUri] = notation;
         continue;
       }
 
       // Label-based match
       for (const [short, full] of GROUP_NAME_MAP) {
         if (label.includes(full) || label.includes(short) || notation === short) {
-          map[body.id] = short;
+          map[bodyId] = short;
           map[notation] = short;
+          if (fullUri) map[fullUri] = short;
           break;
         }
       }
     }
-  } catch {
-    // Ignore – we still have the seeded known groups
+
+    console.log('[EP API] Political group map built with', Object.keys(map).length, 'entries');
+  } catch (e) {
+    console.warn('[EP API] Failed to build political group map:', e);
   }
 
   _politicalGroupMap = map;
@@ -225,56 +263,48 @@ function extractGroupShort(
     if (typeof m === 'object' && m !== null) {
       const rec = m as Record<string, unknown>;
 
-      // Attempt to read the organization reference (many possible keys)
-      const orgFields = [
-        'organization', 'memberOf', 'org', 'hasCorporateBody',
-        'corporateBody', 'inverse_hasOrganization', 'bodyReference',
-        'epvoc:hasCorporateBody', 'org:organization',
-      ];
+      // Scan ALL string values in the membership object for group references
+      // This handles any field name the API might use
+      for (const key of Object.keys(rec)) {
+        const val = rec[key];
 
-      for (const field of orgFields) {
-        const orgValue = rec[field];
-        if (!orgValue) continue;
+        // Check direct string values
+        const strVal = unwrapUri(val) || unwrapLiteral(val);
+        if (strVal) {
+          const notation = extractId(strVal);
+          if (KNOWN_GROUPS.has(notation)) return notation;
+          if (groupMap[notation]) return groupMap[notation];
+          if (groupMap[strVal]) return groupMap[strVal];
 
-        const orgUri = unwrapUri(orgValue);
-        if (!orgUri) continue;
+          // Partial URI match
+          for (const g of KNOWN_GROUPS) {
+            if (strVal.includes(`/${g}`) || strVal.endsWith(`/${g}`)) return g;
+          }
 
-        const notation = extractId(orgUri);
-
-        // Direct match
-        if (KNOWN_GROUPS.has(notation)) return notation;
-        if (groupMap[notation]) return groupMap[notation];
-        if (groupMap[orgUri]) return groupMap[orgUri];
-
-        // Partial URI match (e.g. URI contains /EPP or /S&D)
-        for (const g of KNOWN_GROUPS) {
-          if (orgUri.includes(`/${g}`) || orgUri.endsWith(g)) return g;
+          // Label-based match
+          for (const [short, full] of GROUP_NAME_MAP) {
+            if (strVal.includes(full)) return short;
+          }
         }
-      }
 
-      // Check label / notation on the membership object
-      const labelFields = ['label', 'prefLabel', 'notation', 'name', 'skos:notation'];
-      for (const field of labelFields) {
-        const label = unwrapLiteral(rec[field]);
-        if (!label) continue;
-        if (KNOWN_GROUPS.has(label)) return label;
-        if (groupMap[label]) return groupMap[label];
-        for (const [short, full] of GROUP_NAME_MAP) {
-          if (label.includes(full) || label.includes(short)) return short;
+        // Check nested objects (e.g. org:organization -> { "@id": "..." })
+        if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+          const nested = val as Record<string, unknown>;
+          for (const nk of Object.keys(nested)) {
+            const nv = unwrapUri(nested[nk]) || unwrapLiteral(nested[nk]);
+            if (!nv) continue;
+            const notation = extractId(nv);
+            if (KNOWN_GROUPS.has(notation)) return notation;
+            if (groupMap[notation]) return groupMap[notation];
+            if (groupMap[nv]) return groupMap[nv];
+            for (const g of KNOWN_GROUPS) {
+              if (nv.includes(`/${g}`) || nv.endsWith(`/${g}`)) return g;
+            }
+            for (const [short, full] of GROUP_NAME_MAP) {
+              if (nv.includes(full)) return short;
+            }
+          }
         }
-      }
-
-      // Fall back: try to match from the membership @id itself
-      const mId = unwrapUri(rec['@id']);
-      if (mId) {
-        for (const g of KNOWN_GROUPS) {
-          const escaped = g.replace(/[&/]/g, '');
-          if (mId.includes(`-${g}-`) || mId.includes(`/${g}/`) || mId.endsWith(`/${g}`)) return g;
-          if (escaped && (mId.includes(`-${escaped}-`) || mId.includes(`/${escaped}`))) return g;
-        }
-        // Check group map with the full URI
-        const mIdShort = extractId(mId);
-        if (groupMap[mIdShort]) return groupMap[mIdShort];
       }
     }
 
@@ -447,6 +477,7 @@ export async function fetchMEPs(params: {
   limit?: number;
   countryCode?: string;
   term?: string;
+  useCurrent?: boolean;
 } = {}): Promise<{ items: MEP[]; total: number }> {
   const queryParams: Record<string, string> = {
     offset: String(params.offset || 0),
@@ -461,15 +492,38 @@ export async function fetchMEPs(params: {
     queryParams['parliamentary-term'] = params.term;
   }
 
+  // Use /meps/show-current for current active MEPs, fallback to /meps
+  const endpoint = params.useCurrent
+    ? `${BASE_URL}/meps/show-current`
+    : `${BASE_URL}/meps`;
+
   // Build the group map in parallel with the MEP fetch (first call only)
   const [data, groupMap] = await Promise.all([
-    fetchJSON(`${BASE_URL}/meps`, queryParams),
+    fetchJSON(endpoint, queryParams),
     buildPoliticalGroupMap(),
   ]);
 
-  const graph = extractGraph(data);
+  const isFirstPage = (params.offset || 0) === 0;
+  const graph = extractGraph(data, isFirstPage ? 'fetchMEPs' : undefined);
+
+  // Debug: log first MEP object to understand structure
+  if (isFirstPage && graph.length > 0) {
+    console.log('[EP API] Sample MEP object keys:', Object.keys(graph[0]));
+    console.log('[EP API] Sample MEP hasMembership type:', typeof graph[0]['hasMembership']);
+    if (graph[0]['hasMembership']) {
+      const ms = graph[0]['hasMembership'];
+      const sample = Array.isArray(ms) ? ms[0] : ms;
+      console.log('[EP API] Sample membership value:', typeof sample === 'string' ? sample : JSON.stringify(sample).substring(0, 300));
+    }
+  }
+
   const items = graph.map((item) => parseMEP(item, groupMap));
   const total = extractTotal(data, items.length);
+
+  if (isFirstPage) {
+    const niCount = items.filter(m => m.politicalGroupShort === 'NI').length;
+    console.log(`[EP API] Parsed ${items.length} MEPs, ${niCount} are NI, total reported: ${total}`);
+  }
 
   return { items, total };
 }
@@ -477,8 +531,16 @@ export async function fetchMEPs(params: {
 export async function fetchAllMEPs(countryCode?: string): Promise<MEP[]> {
   const limit = 100;
 
-  // First page: get total count
-  const firstResult = await fetchMEPs({ offset: 0, limit, countryCode });
+  // Try /meps/show-current first (returns only active MEPs)
+  let firstResult: { items: MEP[]; total: number };
+  try {
+    firstResult = await fetchMEPs({ offset: 0, limit, countryCode, useCurrent: true });
+    console.log('[EP API] Using /meps/show-current endpoint');
+  } catch (e) {
+    console.log('[EP API] /meps/show-current failed, falling back to /meps:', e);
+    firstResult = await fetchMEPs({ offset: 0, limit, countryCode });
+  }
+
   const allItems: MEP[] = [...firstResult.items];
   const total = firstResult.total;
 
@@ -489,11 +551,17 @@ export async function fetchAllMEPs(countryCode?: string): Promise<MEP[]> {
       offsets.push(offset);
     }
 
+    // Detect which endpoint worked for first page
+    const useCurrent = true; // Always try show-current for consistency
     const batchSize = 5;
     for (let i = 0; i < offsets.length; i += batchSize) {
       const batch = offsets.slice(i, i + batchSize);
       const results = await Promise.all(
-        batch.map(offset => fetchMEPs({ offset, limit, countryCode }))
+        batch.map(offset =>
+          fetchMEPs({ offset, limit, countryCode, useCurrent }).catch(() =>
+            fetchMEPs({ offset, limit, countryCode })
+          )
+        )
       );
       for (const result of results) {
         allItems.push(...result.items);
@@ -553,9 +621,11 @@ export async function fetchMEPById(id: string): Promise<MEP> {
     buildPoliticalGroupMap(),
   ]);
 
-  // Individual endpoint might wrap in @graph or return flat
+  // Individual endpoint returns framed JSON-LD with @graph containing
+  // the Person + all related Membership/Organization objects
   if (Array.isArray(data['@graph'])) {
     const graph = data['@graph'] as Record<string, unknown>[];
+
     // Find the person item
     const person = graph.find(
       (item) =>
@@ -563,7 +633,36 @@ export async function fetchMEPById(id: string): Promise<MEP> {
         item['givenName'] ||
         item['familyName'],
     );
-    if (person) return parseMEP(person, groupMap);
+
+    if (person) {
+      // The graph may also contain Organization/Membership objects alongside the Person
+      // Check if the person's hasMembership references are just URIs - if so,
+      // resolve them from other @graph items
+      const mep = parseMEP(person, groupMap);
+
+      // If still NI, scan the entire @graph for political group references
+      if (mep.politicalGroupShort === 'NI') {
+        for (const item of graph) {
+          const typeStr = String(item['@type'] || '');
+          // Skip the person itself
+          if (typeStr.includes('Person')) continue;
+
+          // Check if this graph item is a membership/org that contains group info
+          const itemJson = JSON.stringify(item);
+          for (const [short, full] of GROUP_NAME_MAP) {
+            if (itemJson.includes(full) || itemJson.includes(short)) {
+              return {
+                ...mep,
+                politicalGroupShort: short,
+                politicalGroup: GROUP_FULL[short] || short,
+              };
+            }
+          }
+        }
+      }
+
+      return mep;
+    }
     if (graph.length > 0) return parseMEP(graph[0], groupMap);
   }
 
